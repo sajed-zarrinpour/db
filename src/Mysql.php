@@ -1,5 +1,6 @@
 <?php
 namespace SajedZarinpour\DB;
+
 /**
  * This file contains the Mysql trait, which connects the application to mysql server.
  */
@@ -12,7 +13,8 @@ use function SajedZarinpour\DB\config;
  * Please make sure the mysqli extension is available in your php.ini if you are going to use this file.
  * 
  */
-trait Mysql {
+trait Mysql
+{
     /**
      * mysql server host
      * @var string
@@ -45,7 +47,7 @@ trait Mysql {
      */
     private static function __init__statics()
     {
-        self:: check_mysqli();
+        self::check_mysqli();
 
         self::$host = config('host');
         self::$port = config('port');
@@ -61,8 +63,7 @@ trait Mysql {
      */
     private static function check_mysqli()
     {
-        if (!function_exists('mysqli_init') && !extension_loaded('mysqli'))
-        {
+        if (!function_exists('mysqli_init') && !extension_loaded('mysqli')) {
             throw new \Exception('mysqli is not installed on this server.');
         }
     }
@@ -79,13 +80,13 @@ trait Mysql {
      * specify what to print in `print_r` and `var_dump` functions.
      * @return array
      */
-    public function __debugInfo() 
+    public function __debugInfo()
     {
         self::__init__statics();
         return [
-            'host'=>self::$host,
-            'port'=>self::$port,
-            'database'=>self::$database,
+            'host' => self::$host,
+            'port' => self::$port,
+            'database' => self::$database,
         ];
     }
 
@@ -96,30 +97,22 @@ trait Mysql {
      * 
      * @return string the sanitized version of the input
      */
-    private function sanitizer(string $input) :string 
+    private function sanitizer(string $input): string
     {
         return htmlspecialchars($input);
-    } 
+    }
 
     private static function _queryVerb(string $query)
     {
-        if(preg_match('/\bINSERT\b|\binsert\b/', $query))
-        {
+        if (preg_match('/\bINSERT\b|\binsert\b/', $query)) {
             return 'insert';
-        }
-        elseif (preg_match('/\bUPDATE\b|\bupdate\b/', $query)) 
-        {
+        } elseif (preg_match('/\bUPDATE\b|\bupdate\b/', $query)) {
             return 'update';
-        }
-        elseif (preg_match('/\bDELETE\b|\bdelete\b/', $query)) 
-        {
+        } elseif (preg_match('/\bDELETE\b|\bdelete\b/', $query)) {
             return 'delete';
-        }
-        elseif (preg_match('/\bSELECT\b|\bselect\b/', $query)) 
-        {
+        } elseif (preg_match('/\bSELECT\b|\bselect\b/', $query)) {
             return 'select';
-        }
-        else {
+        } else {
             return null;
         }
     }
@@ -131,7 +124,7 @@ trait Mysql {
      * 
      * @return 
      */
-    public static function execute(string $query) 
+    public static function execute(string $query)
     {
         self::__init__statics();
 
@@ -144,43 +137,33 @@ trait Mysql {
         );
 
         // Check connection
-        if ($mysqli->connect_errno)
-        {
+        if ($mysqli->connect_errno) {
             throw new \Exception("Failed to connect to MySQL: " . $mysqli->connect_error);
         }
 
         $result = $mysqli->query($query);
         $out = null;
-        if(!is_bool($result))
-        {
-            if($result->num_rows>0)
-            {
+        if (!is_bool($result)) {
+            if ($result->num_rows > 0) {
                 // Fetch all the results as an associative array
-                $out = $result -> fetch_all(MYSQLI_ASSOC);
+                $out = $result->fetch_all(MYSQLI_ASSOC);
                 // Free result set
-                $result -> free_result();
-                
-            }
-            else
-            {
+                $result->free_result();
+
+            } else {
                 $out = $result;
             }
-        }
-        else 
-        {
-            if (self::_queryVerb($query)==='insert') 
-            {
+        } else {
+            if (self::_queryVerb($query) === 'insert') {
                 $out = $mysqli->insert_id;
-            }
-            else
-            {
+            } else {
                 $out = $result;
             }
-            
+
         }
 
         // closing the connection
-        $mysqli -> close();
+        $mysqli->close();
 
         return $out;
     }
@@ -190,51 +173,42 @@ trait Mysql {
      */
     protected final function query_builder($queryType)
     {
-        if ($queryType === 'insert') 
-        {
+        if ($queryType === 'insert') {
             $columns = '';
             $values = '';
-            $query = 'insert into '. static::$table .' ';
+            $query = 'insert into ' . static::$table . ' ';
 
-            foreach ((object) $this->fields as $key) 
-            {
-                if ($key === 'id') 
-                {
+            foreach ((object) $this->fields as $key) {
+                if ($key === 'id') {
                     continue;
                 }
-                $columns .= '`'.$key . '`,';
-                $values .= '"'.$this->sanitizer($this->$key). '",';
+                $columns .= '`' . $key . '`,';
+                $values .= '"' . $this->sanitizer($this->$key) . '",';
             }
 
-            $columns = '('.substr($columns, 0, -1) . ')';
-            $values = '('.substr($values, 0, -1) . ')';
+            $columns = '(' . substr($columns, 0, -1) . ')';
+            $values = '(' . substr($values, 0, -1) . ')';
 
             return $query . $columns . ' values ' . $values;
-        } 
-        else if($queryType === 'update')
-        {
-            $query = 'UPDATE '. static::$table .' SET ';
+        } else if ($queryType === 'update') {
+            $query = 'UPDATE ' . static::$table . ' SET ';
 
-            foreach ((object) $this->fields as $key) 
-            {
-                if ($key === 'id') 
-                {
+            foreach ((object) $this->fields as $key) {
+                if ($key === 'id') {
                     continue;
                 }
-                $query .= ' `'.$key . '` = "' . $this->sanitizer($this->$key) . '",';
+                $query .= ' `' . $key . '` = "' . $this->sanitizer($this->$key) . '",';
             }
 
             $query = substr($query, 0, -1);
-            $query .= ' WHERE id='.$this->id;
+            $query .= ' WHERE id=' . $this->id;
 
             return $query;
-        }
-        else if($queryType === 'delete')
-        {
-            $query = 'DELETE FROM '. static::$table .' WHERE id='.$this->id.';';
+        } else if ($queryType === 'delete') {
+            $query = 'DELETE FROM ' . static::$table . ' WHERE id=' . $this->id . ';';
             return $query;
         }
-        
+
     }
 
     /**
@@ -243,33 +217,24 @@ trait Mysql {
      */
     public function save()
     {
-        if (empty($this->id)) 
-        {
-            try 
-            {
+        if (empty($this->id)) {
+            try {
                 $query = $this->query_builder('insert');
                 $this->id = $this->execute($query);
                 return true;
-            } 
-            catch (\Throwable $th) 
-            {
+            } catch (\Throwable $th) {
                 throw $th;
             }
-            
-        } 
-        else 
-        {
-            try 
-            {
+
+        } else {
+            try {
                 $query = $this->query_builder('update');
                 return $this->execute($query);
-            } 
-            catch (\Throwable $th) 
-            {
+            } catch (\Throwable $th) {
                 throw $th;
             }
         }
-        
+
     }
 
     /**
@@ -279,23 +244,17 @@ trait Mysql {
      */
     public function delete()
     {
-        if (!empty($this->id)) 
-        {
-            try 
-            {
+        if (!empty($this->id)) {
+            try {
                 $query = $this->query_builder('delete');
                 $this->id = $this->execute($query);
 
                 return true;
-            } 
-            catch (\Throwable $th) 
-            {
+            } catch (\Throwable $th) {
                 throw $th;
             }
-            
-        } 
-        else 
-        {
+
+        } else {
             throw new \Exception("Cannot DELETE a record without id.");
         }
     }
@@ -308,13 +267,12 @@ trait Mysql {
      */
     public static function find($id)
     {
-        try 
-        {
+        try {
             // $query = $this->query_builder('select', [], $id);
             $entity = static::class;
             $instance = new $entity();
 
-            $query = 'SELECT * FROM '. static::$table .' WHERE `id`='.$id;
+            $query = 'SELECT * FROM ' . static::$table . ' WHERE `id`=' . $id;
             $data = (object) self::execute($query)[0];
 
             $instance->id = $data->id;
@@ -322,9 +280,7 @@ trait Mysql {
 
             return $instance;
 
-        } 
-        catch (\Throwable $th) 
-        {
+        } catch (\Throwable $th) {
             throw $th;
         }
     }
@@ -335,34 +291,30 @@ trait Mysql {
      */
     public static function all()
     {
-        try 
-        {
+        try {
 
-            $query = 'SELECT * FROM '. static::$table;
+            $query = 'SELECT * FROM ' . static::$table;
             $data = self::execute($query);
 
             $entity = static::class;
 
             $collection = [];
-            foreach ($data as $item) 
-            {
+            foreach ($data as $item) {
                 $item = (object) $item;
                 $instance = new $entity();
 
                 $instance->id = $item->id;
                 $instance->name = $item->name;
 
-                $collection []= $instance;
+                $collection[] = $instance;
 
-                unset ($instance);
+                unset($instance);
             }
-            
+
 
             return $collection;
 
-        } 
-        catch (\Throwable $th) 
-        {
+        } catch (\Throwable $th) {
             throw $th;
         }
     }
@@ -389,7 +341,7 @@ trait Mysql {
 
     //             unset ($item);
     //         }
-            
+
 
     //         return $collection;
 
@@ -400,7 +352,7 @@ trait Mysql {
     //     }
     // }
 
-    
+
 }
 
 
@@ -422,7 +374,7 @@ trait Mysql {
 // 			$filter []= $prop->name;
 // 		}
 // 		return array_filter(array_diff_key(get_class_vars(__CLASS__), $filter));
-		
+
 // 	}
 // }
 

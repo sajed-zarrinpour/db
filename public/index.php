@@ -20,7 +20,7 @@ var_dump($user);
 $user = User::find(38);
 var_dump($user);
 // update the user
-$user->name="majid";
+$user->name = "majid";
 $user->save();
 
 var_dump(json_encode($user));
