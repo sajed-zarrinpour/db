@@ -1,0 +1,21 @@
+{
+    "name": "sajed.zarinpour/db",
+    "description": "database adaptor",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "SajedZarinpour\\DB\\": "src/",
+            "App\\Models\\": "public/models"
+        },
+        "classmap": ["src/", "public/models"],
+        "files": ["src/config/config.php"]
+    },
+    "authors": [
+        {
+            "name": "Sajed Zarinpour",
+            "email": "sa.zarinpour@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {}
+}
