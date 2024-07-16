@@ -64,7 +64,6 @@ trait Mysql {
         if (!function_exists('mysqli_init') && !extension_loaded('mysqli'))
         {
             throw new \Exception('mysqli is not installed on this server.');
-            exit(1);
         }
     }
 
@@ -148,7 +147,6 @@ trait Mysql {
         if ($mysqli->connect_errno)
         {
             throw new \Exception("Failed to connect to MySQL: " . $mysqli->connect_error);
-            exit(1);
         }
 
         $result = $mysqli->query($query);
@@ -299,7 +297,6 @@ trait Mysql {
         else 
         {
             throw new \Exception("Cannot DELETE a record without id.");
-            exit(1);
         }
     }
 
