@@ -1,16 +1,20 @@
 <?php
 namespace SajedZarinpour\DB;
 
+use SajedZarinpour\DB\envLoader;
+
+
 if (!function_exists('config')) {
     function config(string $key):string {
-        // new SajedZarinpour\DB\envLoader;
-        // envLoader(__DIR__.'/../../');
+        $envl = new envLoader;
+        $envl(__DIR__.'/../../');
+
         $configs = [
-            'host' => '127.0.0.1', // getenv('APP_ENV')??'127.0.0.1',
-            'port' => '3306',
-            'user' => 'dev',
-            'password'=>'password',
-            'database'=>'laravel'
+            'host' => getenv('DB_HOST') ?? '127.0.0.1',
+            'port' => getenv('DB_PORT') ?? '3306',
+            'database'=> getenv('DB_DATABASE') ?? 'laravel',
+            'user' => getenv('DB_USER') ?? 'dev',
+            'password'=> getenv('DB_PASSWORD') ?? 'password',
         ];
 
         if (empty($configs[$key]))
