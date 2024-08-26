@@ -27,12 +27,18 @@ class User extends Model implements \JsonSerializable
     public string $name;
 
     /**
+     * data field
+     * @var string
+     */
+    public string $is_admin;
+
+    /**
      * mendatory: provides the list of columns which will be used later in queries.
      * 
      * @todo refactor the class to get this list automatically
      * @var array
      */
-    protected $fields = ['id', 'name'];
+    protected $fields = ['id', 'name','is_admin'];
 
     /**
      * controls how this object will be printed using `print_r` or `var_dump`
@@ -44,6 +50,7 @@ class User extends Model implements \JsonSerializable
             'attributes' => [
                 'id' => $this->id ?? null,
                 'name' => $this->name ?? null,
+                'is_admin' => $this->is_admin ?? null,
             ],
             'connection info' => parent::__debugInfo(),
         ];

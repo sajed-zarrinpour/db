@@ -102,6 +102,11 @@ trait Mysql
         return htmlspecialchars($input);
     }
 
+    /**
+     * returns the query verb
+     * @param string $query
+     * @return string|null
+     */
     private static function _queryVerb(string $query)
     {
         if (preg_match('/\bINSERT\b|\binsert\b/', $query)) {
@@ -112,6 +117,8 @@ trait Mysql
             return 'delete';
         } elseif (preg_match('/\bSELECT\b|\bselect\b/', $query)) {
             return 'select';
+        } elseif (preg_match('/\bLIKE\b|\blike\b/', $query)) {
+            return 'like';
         } else {
             return null;
         }
@@ -275,8 +282,7 @@ trait Mysql
             $query = 'SELECT * FROM ' . static::$table . ' WHERE `id`=' . $id;
             $data = (object) self::execute($query)[0];
 
-            $instance->id = $data->id;
-            $instance->name = $data->name;
+            $instance = self::cast(static::class, $data);
 
             return $instance;
 
@@ -296,15 +302,14 @@ trait Mysql
             $query = 'SELECT * FROM ' . static::$table;
             $data = self::execute($query);
 
-            $entity = static::class;
+            // $entity = static::class;
 
             $collection = [];
             foreach ($data as $item) {
                 $item = (object) $item;
-                $instance = new $entity();
+                // $instance = new $entity();
 
-                $instance->id = $item->id;
-                $instance->name = $item->name;
+                $instance = self::cast(static::class, $item);
 
                 $collection[] = $instance;
 
@@ -319,38 +324,90 @@ trait Mysql
         }
     }
 
-    // public static function where()
-    // {
-    //     try 
-    //     {
-    //         $instance = new self;
+    /**
+     * Class casting
+     *
+     * @param string|object $destination
+     * @param object $sourceObject
+     * @return object
+     */
+    protected final static function cast($destination, $sourceObject)
+    {
+        // instantiating based on class full name
+        if (is_string($destination)) {
+            $destination = new $destination();
+        }
 
-    //         $query = 'SELECT * FROM '. $instance->table;
-    //         $data = $instance->execute($query);
+        $sourceReflection = new \ReflectionObject($sourceObject);
+        $destinationReflection = new \ReflectionObject($destination);
 
-    //         $collection = [];
-    //         foreach ($data as $item) 
-    //         {
-    //             $item = (object) $item;
-    //             $temp = new self;
+        $sourceProperties = $sourceReflection->getProperties();
 
-    //             $temp->id = $item->id;
-    //             $temp->name = $item->name;
+        foreach ($sourceProperties as $sourceProperty) {
+            $sourceProperty->setAccessible(true);
+            $name = $sourceProperty->getName();
+            $value = $sourceProperty->getValue($sourceObject);
+            if ($destinationReflection->hasProperty($name)) {
+                $propDest = $destinationReflection->getProperty($name);
+                $propDest->setAccessible(true);
+                $propDest->setValue($destination,$value);
+            } else {
+                $destination->$name = $value;
+            }
+        }
+        return $destination;
+    }
 
-    //             $collection []= $temp;
+    /**
+     * impelements where
+     * 
+     * please note that in case of where this functions returns all matches
+     * 
+     * @param string $field_name
+     * @param mixed $value
+     * @param string $operator
+     * @return array
+     */
+    public static function where(string $field_name, $value, string $operator='=')
+    {
+        try 
+        {
 
-    //             unset ($item);
-    //         }
+            $query = 'SELECT * FROM '. static::$table .' ';
+            if (self::_queryVerb($operator) === 'like') {
+                $query .='where `'.$field_name.'` '.$operator.' "%'.$value.'%";';
+            } else {
+                $query .='where `'.$field_name.'`'.$operator.'"'.$value.'";';
+            }
+            
+            
+            
+            $data = self::execute($query);
+
+            // $entity = static::class;
+
+            $collection = [];
+            foreach ($data as $item) 
+            {
+                $item = (object) $item;
+                // $temp = new $entity;
+                $temp = self::cast(static::class, $item);
+
+                $collection []= $temp;
+
+                unset ($item);
+                unset($tmp);
+            }
 
 
-    //         return $collection;
+            return $collection;
 
-    //     } 
-    //     catch (\Throwable $th) 
-    //     {
-    //         throw $th;
-    //     }
-    // }
+        } 
+        catch (\Throwable $th) 
+        {
+            throw $th;
+        }
+    }
 
 
 }
