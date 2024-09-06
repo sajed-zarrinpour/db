@@ -3,17 +3,41 @@ use PHPUnit\Framework\TestCase;
 
 final class ModelTest extends TestCase
 {
-    public function testInsert(): void
+    public static function setUpBeforeClass() : void
     {
         $_ENV['TEST'] = true;
-
         create_test_table();
-        
+        return;
+    }
+    public function testInsert(): void
+    {   
         $user = new User;
-        $user->name = 'testUser';
+        $user->name = 'testInsert';
 
         $this->assertTrue($user->save());
         $this->assertIsInt($user->id);
+    }
+
+    public function testUpdate() : void
+    {
+        $user = new User;
+        $user->name = 'testUpdate';
+        $user->save();
+
+        $user->is_admin = true;
+        $this->assertTrue($user->save());
+    }
+
+    public function testFind() : void
+    {
+        $user = new User;
+        $user->name = 'testFind';
+        $user->save();
+
+        $found = User::find($user->id);
+
+        $this->assertEquals($user->id, $found->id);
+        $this->assertInstanceOf(User::class, $found);
     }
 }
 
