@@ -39,11 +39,7 @@ jobs:
 
     # Add a test script to composer.json, for instance: "test": "vendor/bin/phpunit"
     # Docs: https://getcomposer.org/doc/articles/scripts.md
-    - name: print curent working directory
-      run: |
-        pwd
-        ls -ali
-        vendor/bin/phpunit ./tests
+    
     # - name: Run test suite
     #  run: composer run-script test
     - name: Checkout code
@@ -55,5 +51,5 @@ jobs:
         mysql -e "CREATE DATABASE IF NOT EXISTS $DB_DATABASE;" -u$DB_USER -p$DB_PASSWORD
     # Add more steps for testing and other tasks
     - name: Run Tests
-      run: vendor/bin/phpunit tests
+      run: vendor/bin/phpunit ./tests
   
