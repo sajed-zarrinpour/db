@@ -14,6 +14,11 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    env:
+      DB_DATABASE: test_db
+      DB_USER: root
+      DB_PASSWORD: root
+
     steps:
     - uses: actions/checkout@v4
 
@@ -37,22 +42,14 @@ jobs:
 
     # - name: Run test suite
     #  run: composer run-script test
-  test:
-    runs-on: ubuntu-latest
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-    env:
-      DB_DATABASE: test_db
-      DB_USER: root
-      DB_PASSWORD: root
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Start MySQL
-        run: |
-          sudo /etc/init.d/mysql start
-          mysql -e "CREATE DATABASE IF NOT EXISTS $DB_DATABASE;" -u$DB_USER -p$DB_PASSWORD
-      # Add more steps for testing and other tasks
-      - name: Run Tests
-        run: composer run-script test
+    - name: Start MySQL
+      run: |
+        sudo /etc/init.d/mysql start
+        mysql -e "CREATE DATABASE IF NOT EXISTS $DB_DATABASE;" -u$DB_USER -p$DB_PASSWORD
+    # Add more steps for testing and other tasks
+    - name: Run Tests
+      run: composer run-script test
+  
