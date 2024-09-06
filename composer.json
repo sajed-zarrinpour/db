@@ -1,7 +1,20 @@
 {
-    "name": "sajed.zarinpour/db",
+    "name": "sajed-zarinpour/db",
     "description": "database adaptor",
     "license": "MIT",
+    "type": "library",
+    "keywords": [
+        "library",
+        "ORM"
+    ],
+    "homepage": "https://github.com/sajed-zarrinpour/db",
+    "support": {
+        "issues": "https://github.com/sajed-zarrinpour/db/issues",
+        "source": "https://github.com/sajed-zarrinpour/db",
+        "docs": "https://github.com/sajed-zarrinpour/db",
+        "rss": "https://github.com/sajed-zarrinpour/db/releases.atom",
+        "security": "https://github.com/sajed-zarrinpour/db/security"
+    },
     "autoload": {
         "psr-4": {
             "SajedZarinpour\\DB\\": "src/",
@@ -17,5 +30,7 @@
         }
     ],
     "minimum-stability": "dev",
-    "require": {}
+    "require-dev": {
+        "phpunit/phpunit": "^11.4@dev"
+    }
 }
