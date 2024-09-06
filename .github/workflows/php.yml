@@ -55,5 +55,5 @@ jobs:
         mysql -e "CREATE DATABASE IF NOT EXISTS $DB_DATABASE;" -u$DB_USER -p$DB_PASSWORD
     # Add more steps for testing and other tasks
     - name: Run Tests
-      run: composer run-script test
+      run: vendor/bin/phpunit tests
   
