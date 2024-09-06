@@ -6,6 +6,9 @@ final class ModelTest extends TestCase
     public function testInsert(): void
     {
         $_ENV['TEST'] = true;
+
+        create_test_table();
+        
         $user = new User;
         $user->name = 'testUser';
 
@@ -14,6 +17,46 @@ final class ModelTest extends TestCase
     }
 }
 
+use function SajedZarinpour\DB\config as config;
+function create_test_table()
+{
+    $query = "
+        CREATE TABLE IF NOT EXISTS `test` (
+        `id` int(11) NOT NULL AUTO_INCREMENT,
+        `name` varchar(60) NOT NULL,
+        `is_admin` tinyint(1) DEFAULT 0,
+        PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB AUTO_INCREMENT=114 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='to test crud';
+    ";
+
+    $host = config('host');
+    $port = config('port');
+    $user = config('user');
+    $password = config('password');
+    $database = config('database');
+    
+    // Create connection
+    $conn = new mysqli(
+        $host,
+        $user,
+        $password,
+        $database,
+        intval($port)
+    );
+    // Check connection
+    if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+    }
+
+
+    if ($conn->query($query) === TRUE) {
+    echo "Table test created successfully";
+    } else {
+    echo "Error creating table: " . $conn->error;
+    }
+
+    $conn->close();
+}
 
 use SajedZarinpour\DB\Model;
 use SajedZarinpour\DB\Mysql;
@@ -63,4 +106,5 @@ class User extends Model implements \JsonSerializable
     // protected static $hiden_fields = ['id'];
     
 }
+
 
