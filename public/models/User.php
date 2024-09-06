@@ -6,9 +6,11 @@ namespace App\Models;
  * this file uses base model to represent an entity.
  */
 use SajedZarinpour\DB\Model;
+use SajedZarinpour\DB\Mysql;
 
 class User extends Model implements \JsonSerializable
 {
+    use Mysql;
     /**
      * mendatory: the table that this object represents
      * @var string
@@ -28,43 +30,26 @@ class User extends Model implements \JsonSerializable
 
     /**
      * data field
-     * @var string
+     * @var ?bool
      */
-    public string $is_admin;
+    public ?bool $is_admin;
 
     /**
-     * mendatory: provides the list of columns which will be used later in queries.
+     * optional: 
      * 
-     * @todo refactor the class to get this list automatically
-     * @var array
+     * By default all public variables of models considered as equivalent to corresponding table columns.
+     * if you have fields which are public but have no correspondance in your table,
+     * name the in following array:
+     * 
+     * @var array $except 
      */
-    protected $fields = ['id', 'name','is_admin'];
+    // protected static $except = ['id'];
 
     /**
-     * controls how this object will be printed using `print_r` or `var_dump`
-     * @return array
+     * Specify name of fields you dont want to serilize in json
+     * 
+     * @var array $hiden_fields
      */
-    public function __debugInfo()
-    {
-        return [
-            'attributes' => [
-                'id' => $this->id ?? null,
-                'name' => $this->name ?? null,
-                'is_admin' => $this->is_admin ?? null,
-            ],
-            'connection info' => parent::__debugInfo(),
-        ];
-    }
-
-    /**
-     * controls how this object will be serialized using `json_encode` function.
-     * @return array
-     */
-    public function jsonSerialize()
-    {
-        $vars = get_object_vars($this);
-        unset($vars['fields']);
-        return $vars;
-    }
-
+    // protected static $hiden_fields = ['id'];
+    
 }

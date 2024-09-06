@@ -83,22 +83,40 @@ trait Mysql
     public function __debugInfo()
     {
         self::__init__statics();
+        
         return [
-            'host' => self::$host,
-            'port' => self::$port,
-            'database' => self::$database,
+            'Object Info' => parent::__debugInfo(),
+            'Connection Info' => [
+                'host' => self::$host,
+                'port' => self::$port,
+                'database' => self::$database,
+            ]
         ];
+    }
+
+
+    /**
+     * controls what to print in json_encode
+     * @return array
+     */
+    public function jsonSerialize()
+    {
+        return parent::jsonSerialize();
     }
 
     /**
      * sanitizing the input, security measures goes here
      * 
-     * @param string $input the input value
+     * @param mixed $input the input value
      * 
      * @return string the sanitized version of the input
      */
-    private function sanitizer(string $input): string
+    private function sanitizer($input): string
     {
+        if(gettype($input) === 'boolean')
+        {
+            return $input ? 1 : 0;
+        }
         return htmlspecialchars($input);
     }
 
@@ -151,15 +169,14 @@ trait Mysql
         $result = $mysqli->query($query);
         $out = null;
         if (!is_bool($result)) {
+            // if the query was select :
             if ($result->num_rows > 0) {
                 // Fetch all the results as an associative array
                 $out = $result->fetch_all(MYSQLI_ASSOC);
                 // Free result set
                 $result->free_result();
 
-            } else {
-                $out = $result;
-            }
+            } 
         } else {
             if (self::_queryVerb($query) === 'insert') {
                 $out = $mysqli->insert_id;
@@ -180,13 +197,17 @@ trait Mysql
      */
     protected final function query_builder($queryType)
     {
+        
         if ($queryType === 'insert') {
             $columns = '';
             $values = '';
             $query = 'insert into ' . static::$table . ' ';
 
-            foreach ((object) $this->fields as $key) {
+            foreach ((object) $this->fields() as $key) {
                 if ($key === 'id') {
+                    continue;
+                }
+                if (!isset($this->$key)) {
                     continue;
                 }
                 $columns .= '`' . $key . '`,';
@@ -200,7 +221,7 @@ trait Mysql
         } else if ($queryType === 'update') {
             $query = 'UPDATE ' . static::$table . ' SET ';
 
-            foreach ((object) $this->fields as $key) {
+            foreach ((object) $this->fields() as $key) {
                 if ($key === 'id') {
                     continue;
                 }
@@ -280,9 +301,12 @@ trait Mysql
             $instance = new $entity();
 
             $query = 'SELECT * FROM ' . static::$table . ' WHERE `id`=' . $id;
-            $data = (object) self::execute($query)[0];
+            $data = self::execute($query);
 
-            $instance = self::cast(static::class, $data);
+            if(!empty($data))
+            {
+                $instance = self::cast(static::class, (object) $data[0]);
+            }
 
             return $instance;
 
@@ -324,39 +348,6 @@ trait Mysql
         }
     }
 
-    /**
-     * Class casting
-     *
-     * @param string|object $destination
-     * @param object $sourceObject
-     * @return object
-     */
-    protected final static function cast($destination, $sourceObject)
-    {
-        // instantiating based on class full name
-        if (is_string($destination)) {
-            $destination = new $destination();
-        }
-
-        $sourceReflection = new \ReflectionObject($sourceObject);
-        $destinationReflection = new \ReflectionObject($destination);
-
-        $sourceProperties = $sourceReflection->getProperties();
-
-        foreach ($sourceProperties as $sourceProperty) {
-            $sourceProperty->setAccessible(true);
-            $name = $sourceProperty->getName();
-            $value = $sourceProperty->getValue($sourceObject);
-            if ($destinationReflection->hasProperty($name)) {
-                $propDest = $destinationReflection->getProperty($name);
-                $propDest->setAccessible(true);
-                $propDest->setValue($destination,$value);
-            } else {
-                $destination->$name = $value;
-            }
-        }
-        return $destination;
-    }
 
     /**
      * impelements where
@@ -411,35 +402,3 @@ trait Mysql
 
 
 }
-
-
-
-
-// some idea for develope in future in case I wanted to ommit the $fields variable from my models
-// trait par{
-// 	private $p;
-// 	protected $pt;
-// 	public $inchild = null;
-// 	function pr(){
-// 		// return get_class_vars(__CLASS__);
-// 		// return $this->inChild??'parent';
-// 		$reflect = new ReflectionClass(__CLASS__);
-// 		$props   = $reflect->getProperties(ReflectionProperty:: IS_PRIVATE | ReflectionProperty:: IS_PROTECTED);
-// 		$filter = [];
-// 		foreach($props as $prop)
-// 		{
-// 			$filter []= $prop->name;
-// 		}
-// 		return array_filter(array_diff_key(get_class_vars(__CLASS__), $filter));
-
-// 	}
-// }
-
-// class chil{
-// 	use par;
-// 	private $cp;
-// 	public $inChild='test';
-// }
-
-// $c = new chil;
-// var_dump($c->pr());
