@@ -37,22 +37,14 @@ jobs:
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress
 
-    # Add a test script to composer.json, for instance: "test": "vendor/bin/phpunit"
-    # Docs: https://getcomposer.org/doc/articles/scripts.md
-    
-    # - name: Run test suite
-    #  run: composer run-script test
-    # - name: Checkout code
-    #  uses: actions/checkout@v2
 
     - name: Start MySQL
       run: |
         sudo /etc/init.d/mysql start
         mysql -e "CREATE DATABASE IF NOT EXISTS $DB_DATABASE;" -u$DB_USER -p$DB_PASSWORD
-    # Add more steps for testing and other tasks
-    - name: Run Tests
-      run: |
-        pwd
-        ls -ali
-        vendor/bin/phpunit ./tests
   
+    # Add a test script to composer.json, for instance: "test": "vendor/bin/phpunit"
+    # Docs: https://getcomposer.org/doc/articles/scripts.md
+    
+    - name: Run test suite
+     run: composer run-script test
