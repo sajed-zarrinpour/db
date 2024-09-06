@@ -20,7 +20,6 @@
             "SajedZarinpour\\DB\\": "src/",
             "App\\Models\\": "public/models"
         },
-        "classmap": ["src/", "public/models"],
         "files": ["src/config/config.php"]
     },
     "authors": [
