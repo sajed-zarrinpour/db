@@ -17,10 +17,11 @@
     },
     "autoload": {
         "psr-4": {
-            "SajedZarinpour\\DB\\": "src/",
-            "App\\Models\\": "public/models"
+            "SajedZarinpour\\DB\\": "src/"
         },
-        "files": ["src/config/config.php"]
+        "files": [
+            "src/config/config.php"
+        ]
     },
     "authors": [
         {

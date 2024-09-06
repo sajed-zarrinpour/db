@@ -4,14 +4,14 @@ namespace SajedZarinpour\DB;
 /**
  * this file loads the configurations needed to connect to the database by the package.
  */
-use SajedZarinpour\DB\envLoader;
+use SajedZarinpour\DB\config\envLoader;
 
 
 if (!function_exists('config')) {
     function config(string $key): string
     {
         $envl = new envLoader;
-        $envl(__DIR__ . '/../../');
+        $envl(__DIR__ . '/../../../../..');
 
         $configs = [
             'host' => getenv('DB_HOST') ?? '127.0.0.1',

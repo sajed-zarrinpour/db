@@ -1,5 +1,5 @@
 <?php
-namespace SajedZarinpour\DB;
+namespace SajedZarinpour\DB\config;
 
 /**
  * this file contains the class used to load the configurations from env file if any presents.
