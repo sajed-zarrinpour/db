@@ -131,7 +131,15 @@ trait Mysql
         }
         else if($type === 'string')
         {
-            return htmlspecialchars($input);
+            $mysqli = new \mysqli(
+                self::$host,
+                self::$user,
+                self::$password,
+                self::$database,
+                self::$port,
+            );
+
+            return $mysqli->real_escape_string(htmlspecialchars($input));
         }
         
     }
