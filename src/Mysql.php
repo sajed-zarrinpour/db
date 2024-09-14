@@ -131,6 +131,8 @@ trait Mysql
         }
         else if($type === 'string')
         {
+            self::__init__statics();
+            
             $mysqli = new \mysqli(
                 self::$host,
                 self::$user,
