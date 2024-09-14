@@ -111,13 +111,29 @@ trait Mysql
      * 
      * @return string the sanitized version of the input
      */
-    private function sanitizer($input): string
+    private static function sanitizer($input)
     {
-        if(gettype($input) === 'boolean')
+        $type = gettype($input);
+
+        if($type === 'integer')
         {
-            return $input ? 1 : 0;
+            $input = filter_var($input, FILTER_SANITIZE_NUMBER_INT);
+            return intval($input);
         }
-        return htmlspecialchars($input);
+        else if($type === 'boolean')
+        {
+            return $input ? true : false;
+        }
+        else if($type==='double')
+        {
+            $input = filter_var($input, FILTER_SANITIZE_NUMBER_FLOAT);
+            return floatval($input);
+        }
+        else if($type === 'string')
+        {
+            return htmlspecialchars($input);
+        }
+        
     }
 
     /**
@@ -149,7 +165,7 @@ trait Mysql
      * 
      * @return 
      */
-    public static function execute(string $query)
+    public static function execute(string $typeStr, string $query, array $params)
     {
         self::__init__statics();
 
@@ -166,17 +182,48 @@ trait Mysql
             throw new \Exception("Failed to connect to MySQL: " . $mysqli->connect_error);
         }
 
-        $result = $mysqli->query($query);
-        $out = null;
-        if (!is_bool($result)) {
-            // if the query was select :
-            if ($result->num_rows > 0) {
-                // Fetch all the results as an associative array
-                $out = $result->fetch_all(MYSQLI_ASSOC);
-                // Free result set
-                $result->free_result();
+        // error handling, mysql 8.1+
+        mysqli_report(MYSQLI_REPORT_ERROR);
 
-            } 
+        try 
+        {
+    
+            // $result = $mysqli->query($query);
+            $statement = $mysqli->prepare($query);
+            if(strpos($query, '?'))
+            {
+                $statement->bind_param($typeStr, ...$params);
+            }
+            $statement->execute();
+            $result = $statement->get_result();
+
+            $affected_rows = $statement->affected_rows;
+            // var_dump($affected_rows);
+            preg_match_all('/(\S[^:]+): (\d+)/', $mysqli->info, $matches); 
+            $infoArr = array_combine ($matches[1], $matches[2]);
+            // var_dump($infoArr);
+
+        } 
+        catch (\mysqli_sql_exception $mysqli_sql_exception) 
+        {
+            unset($result);
+            $mysqli->close();
+            throw new \Exception($mysqli_sql_exception->getMessage());
+        }
+        
+        $out = null;
+        // var_dump('code is here',$result);
+        if($result instanceof \mysqli_result && $result->num_rows == 0) 
+        {
+            // in case of searching for an id which is not exists
+            return $out;
+        }
+        if ($result instanceof \mysqli_result && $result->num_rows > 0) {
+            // Fetch all the results as an associative array
+            $out = $result->fetch_all(MYSQLI_ASSOC);
+            // var_dump($out);
+            // Free result set
+            $result->free_result();
         } else {
             if (self::_queryVerb($query) === 'insert') {
                 $out = $mysqli->insert_id;
@@ -200,7 +247,9 @@ trait Mysql
         
         if ($queryType === 'insert') {
             $columns = '';
-            $values = '';
+            $placeholders = '';
+            $values = [];
+
             $query = 'insert into ' . static::$table . ' ';
 
             foreach ((object) $this->fields() as $key) {
@@ -211,30 +260,44 @@ trait Mysql
                     continue;
                 }
                 $columns .= '`' . $key . '`,';
-                $values .= '"' . $this->sanitizer($this->$key) . '",';
+                
+                $values []= self::sanitizer($this->$key);
+                $placeholders .= ' ?,';
             }
 
             $columns = '(' . substr($columns, 0, -1) . ')';
-            $values = '(' . substr($values, 0, -1) . ')';
+            $placeholders = '(' . substr($placeholders, 0, -1) . ')';
 
-            return $query . $columns . ' values ' . $values;
+            return (object)[
+                'statement' => $query . $columns . ' values ' . $placeholders,
+                'fields' => $values
+            ];
         } else if ($queryType === 'update') {
+            $values = [];
             $query = 'UPDATE ' . static::$table . ' SET ';
 
             foreach ((object) $this->fields() as $key) {
                 if ($key === 'id') {
                     continue;
                 }
-                $query .= ' `' . $key . '` = "' . $this->sanitizer($this->$key) . '",';
+                $query .= ' `' . $key . '` = ?,';
+                $values []= self::sanitizer($this->$key);
             }
 
             $query = substr($query, 0, -1);
-            $query .= ' WHERE id=' . $this->id;
-
-            return $query;
+            $query .= ' WHERE id= ? ;';
+            $values []= $this->id;
+            return (object)[
+                'statement' => $query,
+                'fields' => $values
+            ];
         } else if ($queryType === 'delete') {
-            $query = 'DELETE FROM ' . static::$table . ' WHERE id=' . $this->id . ';';
-            return $query;
+            $query = 'DELETE FROM ' . static::$table . ' WHERE id= ?;';
+            $values = [$this->id];
+            return (object)[
+                'statement' => $query,
+                'fields' => $values
+            ];
         }
 
     }
@@ -248,7 +311,8 @@ trait Mysql
         if (empty($this->id)) {
             try {
                 $query = $this->query_builder('insert');
-                $this->id = $this->execute($query);
+                $typeStr = $this->prepare_query('insert');
+                $this->id = $this->execute($typeStr, $query->statement, $query->fields);
                 return true;
             } catch (\Throwable $th) {
                 throw $th;
@@ -257,7 +321,9 @@ trait Mysql
         } else {
             try {
                 $query = $this->query_builder('update');
-                return $this->execute($query);
+                $typeStr = $this->prepare_query('update');
+    
+                return $this->execute($typeStr, $query->statement, $query->fields);
             } catch (\Throwable $th) {
                 throw $th;
             }
@@ -275,7 +341,9 @@ trait Mysql
         if (!empty($this->id)) {
             try {
                 $query = $this->query_builder('delete');
-                $this->id = $this->execute($query);
+                $typeStr = $this->prepare_query('delete');
+
+                $this->id = $this->execute($typeStr, $query->statement, $query->fields);
 
                 return true;
             } catch (\Throwable $th) {
@@ -300,9 +368,12 @@ trait Mysql
             $entity = static::class;
             $instance = new $entity();
 
-            $query = 'SELECT * FROM ' . static::$table . ' WHERE `id`=' . $id;
-            $data = self::execute($query);
-
+            $query = 'SELECT * FROM ' . static::$table . ' WHERE `id`= ?;';
+            /**
+             * @todo, id might not be integer!
+             */
+            $data = self::execute('i', $query, [self::sanitizer($id)]);
+            
             if(!empty($data))
             {
                 $instance = self::cast(static::class, (object) $data[0]);
@@ -324,7 +395,7 @@ trait Mysql
         try {
 
             $query = 'SELECT * FROM ' . static::$table;
-            $data = self::execute($query);
+            $data = self::execute('', $query,[]);
 
             // $entity = static::class;
 
@@ -399,6 +470,100 @@ trait Mysql
             throw $th;
         }
     }
+
+
+    /**
+     * prepares the query to be used in mysql prepare.
+     * @return string
+     */
+    public function prepare_query($queryType):string
+    {
+        /**
+         * for each query type, fields may vary. 
+         * henceforth first for each types of queries we have to
+         * compose an array of fields involved.
+         * 
+         * next we use reflections to get the type of each variable to compose the type string which 
+         * will be used in bind_param function as the first arg.
+         * 
+         * here is the map:
+         * i - integer
+         * d - double
+         * s - string
+         * b - binary
+         */
+        $typeStr = '';
+
+        $map = function($type){
+            if ($type === 'int') {
+                return 'i';
+            }
+            else if($type === 'double'){
+                return 'd';
+            }
+            else if($type === 'string'){
+                return 's';
+            }
+            else if($type === 'bool'){
+                return 'b';
+            }
+            throw new \Exception('Undefined type.');
+        };
+
+        if ($queryType === 'insert') {
+
+            foreach ((object) $this->fields() as $key) {
+                if ($key === 'id') {
+                    continue;
+                }
+                if (!isset($this->$key)) {
+                    continue;
+                }
+                $type = gettype($key);
+                $typeStr .= $map($type);
+            }
+
+            return $typeStr;
+        } else if ($queryType === 'update') {
+
+            foreach ((object) $this->fields() as $key) {
+                if ($key === 'id') {
+                    continue;
+                }
+                // if (!isset($this->$key)) {
+                //     continue;
+                // }
+                $type = gettype($key);
+                $typeStr .= $map($type);
+            }
+
+            // last parameter is id
+            $type = gettype('id');
+            $typeStr .= $map($type);
+
+            return $typeStr;
+        } else if ($queryType === 'delete') {
+            $type = gettype('id');
+            $typeStr .= $map($type);
+
+            return $typeStr;
+        }
+
+
+    }
+
+    /**
+     * to handle validation error of parameters reported by php filter_var
+     * 
+     * to be used in pair with prepare_query()
+     * @return void
+     */
+    protected static function sanitizer_error_callback()
+    {
+
+    }
+
+
 
 
 }
