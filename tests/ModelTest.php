@@ -36,8 +36,8 @@ final class ModelTest extends TestCase
 
         $found = User::find($user->id);
 
-        $this->assertEquals($user->id, $found->id);
         $this->assertInstanceOf(User::class, $found);
+        $this->assertEquals($user->id, $found->id);
     }
 }
 
