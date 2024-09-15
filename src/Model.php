@@ -51,6 +51,20 @@ abstract class Model implements \JsonSerializable
         return $destination;
     }
 
+    protected final static function getType($name)
+    {
+        // instantiating based on class full name
+        $entity = static::class;
+        $entity = new $entity();
+        $sourceReflection = new \ReflectionObject($entity);
+        $property = $sourceReflection->getProperty($name);
+        $property->setAccessible(true);
+        $type = $property->getType();
+        $typeName = $type->getName();
+
+        return $typeName;
+    }
+
     public final static function fields()
     {
         // get the namespaced name of the class, needed for consistency with php 7
