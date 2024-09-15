@@ -197,20 +197,23 @@ trait Mysql
 
         try 
         {
-    
-            // $result = $mysqli->query($query);
             $statement = $mysqli->prepare($query);
             if(strpos($query, '?'))
             {
                 $statement->bind_param($typeStr, ...$params);
             }
-            $statement->execute();
-            $result = $statement->get_result();
-
-            $affected_rows = $statement->affected_rows;
-            // var_dump($affected_rows);
-            preg_match_all('/(\S[^:]+): (\d+)/', $mysqli->info, $matches); 
-            $infoArr = array_combine ($matches[1], $matches[2]);
+            
+            $result = $statement->execute(); 
+            
+            if($statement->affected_rows == -1)
+            {
+                // if the qury was select
+                $result = $statement->get_result();
+            }
+            
+            // more information, usefull specially for debug
+            // preg_match_all('/(\S[^:]+): (\d+)/', $mysqli->info, $matches); 
+            // $infoArr = array_combine ($matches[1], $matches[2]);
             // var_dump($infoArr);
 
         } 
@@ -222,7 +225,7 @@ trait Mysql
         }
         
         $out = null;
-        // var_dump('code is here',$result);
+    
         if($result instanceof \mysqli_result && $result->num_rows == 0) 
         {
             // in case of searching for an id which is not exists
@@ -231,7 +234,6 @@ trait Mysql
         if ($result instanceof \mysqli_result && $result->num_rows > 0) {
             // Fetch all the results as an associative array
             $out = $result->fetch_all(MYSQLI_ASSOC);
-            // var_dump($out);
             // Free result set
             $result->free_result();
         } else {
@@ -290,6 +292,9 @@ trait Mysql
                 if ($key === 'id') {
                     continue;
                 }
+                // if (!isset($this->$key)) {
+                //     continue;
+                // }
                 $query .= ' `' . $key . '` = ?,';
                 $values []= self::sanitizer($this->$key);
             }
@@ -332,7 +337,6 @@ trait Mysql
             try {
                 $query = $this->query_builder('update');
                 $typeStr = $this->prepare_query('update');
-    
                 return $this->execute($typeStr, $query->statement, $query->fields);
             } catch (\Throwable $th) {
                 throw $th;
@@ -505,7 +509,7 @@ trait Mysql
         $typeStr = '';
 
         $map = function($type){
-            if ($type === 'int') {
+            if ($type === 'int' || $type ==='bool') {
                 return 'i';
             }
             else if($type === 'double'){
@@ -514,7 +518,7 @@ trait Mysql
             else if($type === 'string'){
                 return 's';
             }
-            else if($type === 'bool'){
+            else if($type === 'binary'){
                 return 'b';
             }
             throw new \Exception('Undefined type.');
@@ -529,13 +533,13 @@ trait Mysql
                 if (!isset($this->$key)) {
                     continue;
                 }
+
                 $type = gettype($key);
                 $typeStr .= $map($type);
             }
 
             return $typeStr;
         } else if ($queryType === 'update') {
-
             foreach ((object) $this->fields() as $key) {
                 if ($key === 'id') {
                     continue;
@@ -543,12 +547,13 @@ trait Mysql
                 // if (!isset($this->$key)) {
                 //     continue;
                 // }
-                $type = gettype($key);
+
+                $type = self::getType($key);
                 $typeStr .= $map($type);
             }
 
             // last parameter is id
-            $type = gettype('id');
+            $type = self::gettype('id');
             $typeStr .= $map($type);
 
             return $typeStr;
